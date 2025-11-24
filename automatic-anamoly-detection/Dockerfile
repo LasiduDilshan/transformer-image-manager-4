@@ -7,10 +7,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# System deps (minimal; add more if opencv needs extras)
+# System deps (opencv headless still needs these shared libs)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        libgl1 && \
+        libgl1 \
+        libglib2.0-0 \
+        libsm6 \
+        libxext6 \
+        libxrender1 && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

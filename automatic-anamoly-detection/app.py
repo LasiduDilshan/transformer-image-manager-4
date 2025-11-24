@@ -1,26 +1,17 @@
-"""
-FastAPI + Gradio wrapper for PatchCore inference.
-The Space exposes both an HTTP API and a simple web UI:
-- POST /infer for programmatic use
-- /ui for the Gradio upload -> boxed image experience
-"""
-
 import base64
-import io
 import json
 import os
 import shutil
 import sys
 import tempfile
+import time
 from pathlib import Path
 from threading import Lock
 from typing import Optional
 
-import gradio as gr
-import numpy as np
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 import requests
 import torch
-from PIL import Image
 
 # Ensure we can import inference_core_local from Model_Inference/
 BASE_DIR = Path(__file__).parent.resolve()
@@ -100,9 +91,7 @@ def _run_inference_bytes(
     feedback_json: str,
     ckpt_url: Optional[str] = None,
 ):
-    """
-    Shared inference routine used by both the FastAPI endpoint and the Gradio UI.
-    """
+    """Core inference routine used by the FastAPI endpoint."""
     sensitivity = _clamp_sensitivity(sensitivity)
     try:
         model = _load_model(ckpt_url)
@@ -155,102 +144,74 @@ def _run_inference_bytes(
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
-def _image_to_bytes(image) -> bytes:
-    """
-    Normalize a Gradio image input (numpy array or PIL Image) into PNG bytes.
-    """
-    if image is None:
-        raise ValueError("No image provided.")
-
-    if isinstance(image, np.ndarray):
-        image = Image.fromarray(image.astype("uint8"))
-    elif not isinstance(image, Image.Image):
-        raise ValueError("Unsupported image type.")
-
-    buf = io.BytesIO()
-    image.save(buf, format="PNG")
-    buf.seek(0)
-    return buf.read()
+api = FastAPI(title="PatchCore Anomaly Detection API")
 
 
-def _gradio_predict(image, sensitivity=1.0, feedback_text="", ckpt_url=""):
-    if image is None:
-        return "Please upload an image.", None, {"error": "No image provided"}, False
+@api.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "device": str(DEVICE),
+        "loaded_ckpt": _loaded_ckpt,
+    }
 
+
+@api.post("/infer")
+async def infer_endpoint(
+    file: UploadFile = File(...),
+    sensitivity: float = Form(1.0),
+    feedback_json: str = Form(""),
+    ckpt_url: str = Form("", description="Optional override for checkpoint URL"),
+):
+    if file is None:
+        raise HTTPException(status_code=400, detail="file is required")
+
+    file_bytes = await file.read()
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+    started = time.perf_counter()
     try:
         inference = _run_inference_bytes(
-            _image_to_bytes(image),
-            "upload.png",
+            file_bytes,
+            file.filename or "upload.png",
             sensitivity,
-            feedback_text,
+            feedback_json,
             ckpt_url or None,
         )
-        boxed_img = Image.open(io.BytesIO(inference["boxed_bytes"])).convert("RGB")
-        return (
-            inference.get("label"),
-            boxed_img,
-            inference.get("json"),
-            bool(inference.get("feedback_applied")),
-        )
-    except Exception as exc:  # pragma: no cover - UI-friendly error path
-        return f"Error: {exc}", None, {"error": str(exc)}, False
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    duration_ms = int((time.perf_counter() - started) * 1000)
+    boxed_b64 = base64.b64encode(inference["boxed_bytes"]).decode("ascii")
+
+    return {
+        "label": inference.get("label"),
+        "json": inference.get("json"),
+        "json_text": inference.get("json_text"),
+        "boxed_image_base64": boxed_b64,
+        "boxed_image_ext": inference.get("boxed_image_ext", ".png"),
+        "feedback_applied": inference.get("feedback_applied"),
+        "duration_ms": duration_ms,
+    }
 
 
-def _build_gradio() -> gr.Blocks:
-    example_image = str(MODEL_DIR / "test_image" / "test01.jpg")
-
-    with gr.Blocks(title="PatchCore Anomaly Detection") as demo:
-        gr.Markdown(
-            "## PatchCore Anomaly Detection\n"
-            "Upload an image to get the boxed anomaly visualization and JSON detections. "
-            "You can also tweak sensitivity or provide feedback JSON from your backend."
-        )
-        with gr.Row():
-            with gr.Column():
-                image_input = gr.Image(type="numpy", label="Upload image")
-                sensitivity = gr.Slider(
-                    minimum=0.1,
-                    maximum=2.0,
-                    step=0.05,
-                    value=1.0,
-                    label="Detection sensitivity",
-                )
-                feedback_box = gr.Textbox(
-                    label="Feedback JSON (optional)",
-                    placeholder='{"label_adjustments": {...}}',
-                    lines=4,
-                )
-                ckpt_box = gr.Textbox(
-                    label="Checkpoint URL override (optional)",
-                    placeholder="https://.../model.ckpt",
-                )
-                run_btn = gr.Button("Run inference", variant="primary")
-                gr.Examples(
-                    examples=[[example_image, 1.0, "", ""]],
-                    inputs=[image_input, sensitivity, feedback_box, ckpt_box],
-                    label="Sample image",
-                )
-
-            with gr.Column():
-                label_out = gr.Textbox(label="Predicted label", interactive=False)
-                boxed_out = gr.Image(type="pil", label="Boxed output")
-                json_out = gr.JSON(label="Detection JSON")
-                feedback_applied = gr.Checkbox(
-                    label="Feedback applied?", value=False, interactive=False
-                )
-
-        run_btn.click(
-            fn=_gradio_predict,
-            inputs=[image_input, sensitivity, feedback_box, ckpt_box],
-            outputs=[label_out, boxed_out, json_out, feedback_applied],
-            show_progress=True,
-        )
-
-    return demo
+@api.get("/", include_in_schema=False)
+def root():
+    return {
+        "message": "PatchCore anomaly detection API is running. POST /infer with multipart form: file, sensitivity (float), feedback_json (string), optional ckpt_url."
+    }
 
 
-app = _build_gradio()
+app = api
 
 
 if __name__ == "__main__":  # pragma: no cover - manual run
-    app.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)))
+    import uvicorn
+
+    uvicorn.run(
+        "app:app",
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 7860)),
+        log_level="info",
+    )
