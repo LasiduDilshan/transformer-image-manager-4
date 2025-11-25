@@ -22,6 +22,7 @@ import com.example.transformer_manager_backkend.entity.Inspection;
 import com.example.transformer_manager_backkend.entity.MaintenanceRecord;
 import com.example.transformer_manager_backkend.entity.TransformerRecord;
 import com.example.transformer_manager_backkend.repository.MaintenanceRecordRepository;
+import com.lowagie.text.BadElementException;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Font;
@@ -43,6 +44,20 @@ public class MaintenanceRecordPdfService {
     private static final Font BODY_FONT = FontFactory.getFont(FontFactory.HELVETICA, 11);
     private static final Font CELL_HEADER_FONT = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11);
     private static final Font CELL_FONT = FontFactory.getFont(FontFactory.HELVETICA, 10);
+    private static final Font SUMMARY_LABEL_FONT;
+    private static final Font SUMMARY_VALUE_FONT;
+    private static final Font CAPTION_FONT;
+
+    static {
+        SUMMARY_LABEL_FONT = FontFactory.getFont(FontFactory.HELVETICA, 9, Font.BOLD);
+        SUMMARY_LABEL_FONT.setColor(Color.WHITE);
+
+        SUMMARY_VALUE_FONT = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 15);
+        SUMMARY_VALUE_FONT.setColor(Color.WHITE);
+
+        CAPTION_FONT = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 9);
+        CAPTION_FONT.setColor(Color.DARK_GRAY);
+    }
 
     private final MaintenanceRecordRepository maintenanceRecordRepository;
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm", Locale.ENGLISH);
@@ -56,22 +71,35 @@ public class MaintenanceRecordPdfService {
 
     @Transactional(readOnly = true)
     public byte[] generatePdf(Long recordId) {
-        MaintenanceRecord record = maintenanceRecordRepository.findById(recordId)
+        long safeId = Optional.ofNullable(recordId)
+            .orElseThrow(() -> new IllegalArgumentException("Record ID must be provided"));
+
+        MaintenanceRecord record = maintenanceRecordRepository.findById(safeId)
                 .orElseThrow(() -> new RuntimeException("Maintenance record not found"));
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            @SuppressWarnings("resource")
             Document document = new Document(PageSize.A4, 40, 40, 40, 40);
             PdfWriter.getInstance(document, baos);
             document.open();
 
             addHeader(document, record);
+            addSummarySection(document, record);
             addTransformerSection(document, record);
             addElectricalSection(document, record);
             addMaintenanceSection(document, record);
             addAnalysisSummary(document, record);
-            addImageSection(document, "Maintenance Images", collectMaintenanceImages(record));
-            addImageSection(document, "Annotated Images", collectAnnotatedImages(record));
-            addImageSection(document, "Baseline Images", collectBaselineImages(record));
+            List<Path> maintenanceImages = collectMaintenanceImages(record);
+            List<Path> annotatedImages = collectAnnotatedImages(record);
+            List<Path> baselineImages = collectBaselineImages(record);
+
+            if (!maintenanceImages.isEmpty() || !annotatedImages.isEmpty() || !baselineImages.isEmpty()) {
+                document.newPage();
+            }
+
+            addImageSection(document, "Maintenance Images", maintenanceImages);
+            addImageSection(document, "Annotated Images", annotatedImages);
+            addImageSection(document, "Baseline Images", baselineImages);
 
             document.close();
             return baos.toByteArray();
@@ -92,6 +120,22 @@ public class MaintenanceRecordPdfService {
         addKeyValueCell(table, "Status", safeValue(record.getRecordStatus()));
         addKeyValueCell(table, "Inspector", safeValue(record.getInspectorName()));
         addKeyValueCell(table, "Inspection Date", formatDate(Optional.ofNullable(record.getInspection()).map(Inspection::getInspectionDate).orElse(null)));
+        document.add(table);
+    }
+
+    private void addSummarySection(Document document, MaintenanceRecord record) throws DocumentException {
+        PdfPTable table = new PdfPTable(new float[] { 1, 1, 1 });
+        table.setWidthPercentage(100);
+        table.setSpacingAfter(12f);
+
+        table.addCell(createSummaryCell("Record Status", safeValue(record.getRecordStatus()), new Color(32, 76, 136)));
+        table.addCell(createSummaryCell("Priority", safeValue(record.getMaintenancePriority()), new Color(48, 121, 96)));
+
+        String followUp = Boolean.TRUE.equals(record.getRequiresFollowUp())
+                ? formatDate(record.getFollowUpDate())
+                : "No follow-up scheduled";
+        table.addCell(createSummaryCell("Follow-up", followUp, new Color(176, 94, 27)));
+
         document.add(table);
     }
 
@@ -177,24 +221,25 @@ public class MaintenanceRecordPdfService {
         document.add(makeSectionHeader(title));
         if (images.isEmpty()) {
             document.add(new Paragraph("Not available", BODY_FONT));
-            document.add(new Paragraph(" ")); // spacer
+            document.add(new Paragraph(" "));
             return;
         }
 
+        PdfPTable imageTable = new PdfPTable(2);
+        imageTable.setWidthPercentage(100);
+        imageTable.setSpacingAfter(12f);
+
         for (Path path : images) {
-            try {
-                com.lowagie.text.Image pdfImage = com.lowagie.text.Image.getInstance(path.toAbsolutePath().toString());
-                pdfImage.scaleToFit(450, 300);
-                pdfImage.setAlignment(com.lowagie.text.Image.ALIGN_CENTER);
-                document.add(pdfImage);
-                Paragraph caption = new Paragraph(path.getFileName().toString(), BODY_FONT);
-                caption.setAlignment(Paragraph.ALIGN_CENTER);
-                caption.setSpacingAfter(8f);
-                document.add(caption);
-            } catch (Exception imageError) {
-                document.add(new Paragraph("Failed to embed image: " + path.getFileName(), BODY_FONT));
-            }
+            imageTable.addCell(createImageCell(path));
         }
+
+        if (images.size() % 2 != 0) {
+            PdfPCell filler = new PdfPCell();
+            filler.setBorder(Rectangle.NO_BORDER);
+            imageTable.addCell(filler);
+        }
+
+        document.add(imageTable);
     }
 
     private List<Path> collectMaintenanceImages(MaintenanceRecord record) {
@@ -216,10 +261,18 @@ public class MaintenanceRecordPdfService {
 
         for (Image image : maintenanceImages) {
             AnalysisJob job = image.getAnalysisJob();
-            if (job == null || job.getBoxedImagePath() == null) {
-                continue;
+            boolean added = false;
+            if (job != null && job.getBoxedImagePath() != null) {
+                Optional<Path> boxedPath = resolveUploadsPath(job.getBoxedImagePath());
+                if (boxedPath.isPresent()) {
+                    annotated.add(boxedPath.get());
+                    added = true;
+                }
             }
-            resolveUploadsPath(job.getBoxedImagePath()).ifPresent(annotated::add);
+
+            if (!added) {
+                deriveBoxedPathFromOriginal(image).ifPresent(annotated::add);
+            }
         }
         return annotated;
     }
@@ -260,6 +313,44 @@ public class MaintenanceRecordPdfService {
     private PdfPCell createBodyCell(String value) {
         PdfPCell cell = new PdfPCell(new Phrase(safeValue(value), CELL_FONT));
         cell.setPadding(6f);
+        return cell;
+    }
+
+    private PdfPCell createSummaryCell(String label, String value, Color backgroundColor) {
+        PdfPCell cell = new PdfPCell();
+        cell.setBackgroundColor(backgroundColor);
+        cell.setPadding(12f);
+        cell.setBorder(Rectangle.NO_BORDER);
+
+        Paragraph labelParagraph = new Paragraph(label.toUpperCase(Locale.ENGLISH), SUMMARY_LABEL_FONT);
+        labelParagraph.setSpacingAfter(4f);
+        Paragraph valueParagraph = new Paragraph(safeValue(value), SUMMARY_VALUE_FONT);
+
+        cell.addElement(labelParagraph);
+        cell.addElement(valueParagraph);
+        return cell;
+    }
+
+    private PdfPCell createImageCell(Path path) {
+        PdfPCell cell = new PdfPCell();
+        cell.setBorder(Rectangle.NO_BORDER);
+        cell.setPadding(8f);
+
+        try {
+            com.lowagie.text.Image pdfImage = com.lowagie.text.Image
+                    .getInstance(path.toAbsolutePath().toString());
+            pdfImage.scaleToFit(240, 200);
+            pdfImage.setAlignment(com.lowagie.text.Image.ALIGN_CENTER);
+            cell.addElement(pdfImage);
+        } catch (IOException | BadElementException imageError) {
+            cell.addElement(new Paragraph("Image unavailable (" + path.getFileName() + ")", BODY_FONT));
+        }
+
+        Paragraph caption = new Paragraph(path.getFileName().toString(), CAPTION_FONT);
+        caption.setAlignment(Paragraph.ALIGN_CENTER);
+        caption.setSpacingBefore(4f);
+        cell.addElement(caption);
+
         return cell;
     }
 
@@ -307,6 +398,28 @@ public class MaintenanceRecordPdfService {
         }
         String trimmed = text.trim();
         return trimmed.length() <= 120 ? trimmed : trimmed.substring(0, 117) + "...";
+    }
+
+    private Optional<Path> deriveBoxedPathFromOriginal(Image image) {
+        if (image.getFilePath() == null || image.getFilePath().isBlank()) {
+            return Optional.empty();
+        }
+
+        String normalized = image.getFilePath().replace("\\", "/");
+        int lastSlash = normalized.lastIndexOf('/');
+        String fileName = lastSlash >= 0 ? normalized.substring(lastSlash + 1) : normalized;
+        int dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex < 0) {
+            return Optional.empty();
+        }
+
+        String baseName = fileName.substring(0, dotIndex);
+        if (baseName.endsWith("_boxed")) {
+            baseName = baseName.substring(0, baseName.length() - 6);
+        }
+        String extension = fileName.substring(dotIndex);
+        String candidate = "analysis/" + baseName + "_boxed" + extension;
+        return resolveUploadsPath(candidate);
     }
 
     private Optional<Path> resolveUploadsPath(String storedPath) {
