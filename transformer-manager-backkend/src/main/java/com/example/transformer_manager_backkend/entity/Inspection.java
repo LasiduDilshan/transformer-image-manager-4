@@ -1,11 +1,23 @@
 package com.example.transformer_manager_backkend.entity;
 
-import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
-
 import java.time.LocalDateTime;
 import java.util.List;
+
+import org.hibernate.annotations.CreationTimestamp;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "inspections")
@@ -23,6 +35,10 @@ public class Inspection {
     @OneToMany(mappedBy = "inspection", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnoreProperties({ "inspection", "transformerRecord" })
     private List<Image> images;
+
+    @OneToOne(mappedBy = "inspection", cascade = CascadeType.ALL)
+    @JsonIgnoreProperties({ "inspection" })
+    private MaintenanceRecord maintenanceRecord;
 
     @ManyToOne
     @JoinColumn(name = "conducted_by_admin")
@@ -138,5 +154,13 @@ public class Inspection {
 
     public void setInspectionDate(LocalDateTime inspectionDate) {
         this.inspectionDate = inspectionDate;
+    }
+
+    public MaintenanceRecord getMaintenanceRecord() {
+        return maintenanceRecord;
+    }
+
+    public void setMaintenanceRecord(MaintenanceRecord maintenanceRecord) {
+        this.maintenanceRecord = maintenanceRecord;
     }
 }

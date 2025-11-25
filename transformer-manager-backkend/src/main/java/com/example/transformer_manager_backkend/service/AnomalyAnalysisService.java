@@ -49,6 +49,15 @@ public class AnomalyAnalysisService {
     private final ModelFeedbackService modelFeedbackService;
     private final ObjectMapper objectMapper;
     private final ExecutorService executorService;
+
+    @Value("${app.anomaly.model.path:C:/Users/pasir/Desktop/Github/transformer-image-manager-3/automatic-anamoly-detection/Model_Inference}")
+    private String modelPath;
+
+    @Value("${app.anomaly.venv.path:/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-3/automatic-anamoly-detection/.venv}")
+    private String venvPath;
+
+    @Value("${app.anomaly.temp.dir:./temp/anomaly-analysis}")
+    private String tempDir;
     private final RestTemplate restTemplate;
     private final String anomalyApiUrl;
     private final long anomalyApiTimeoutMs;
@@ -219,6 +228,49 @@ public class AnomalyAnalysisService {
                             f.getAvgConfidenceDelta()));
         } else {
             logger.info("No user feedback adjustments available yet.");
+        }
+        logger.info("Project root (Windows): {}", currentDir);
+        logger.info("Project root (WSL): {}", projectRootWSL);
+        logger.info("Input directory (Windows): {}", inputDir.toAbsolutePath());
+        logger.info("Input directory (WSL): {}", wslInputDir);
+        logger.info("Output directory (Windows): {}", outputDir.toAbsolutePath());
+        logger.info("Output directory (WSL): {}", wslOutputDir);
+        logger.info("Feedback payload (WSL path): {}", wslFeedbackPath);
+
+        // Prepare WSL command with sensitivity and feedback adjustments
+        String wslCommand = String.format(
+                "wsl --cd \"/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-3/automatic-anamoly-detection/Model_Inference\" -- ./run_inference.sh --venv \"%s\" --input \"%s\" --outdir \"%s\" --sensitivity %.2f --feedback \"%s\"",
+                venvPath,
+                wslInputDir,
+                wslOutputDir,
+                sensitivity,
+                wslFeedbackPath);
+        logger.info("Running WSL command: {}", wslCommand);
+
+        // Execute the command
+        ProcessBuilder processBuilder = new ProcessBuilder("cmd", "/c", wslCommand);
+        processBuilder.directory(new File(modelPath));
+        Process process = processBuilder.start();
+
+        // Capture output
+        StringBuilder output = new StringBuilder();
+        StringBuilder error = new StringBuilder();
+
+        try (BufferedReader outputReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+
+            String line;
+            while ((line = outputReader.readLine()) != null) {
+                output.append(line).append("\n");
+                logger.debug("Analysis output: {}", line);
+            }
+
+            while ((line = errorReader.readLine()) != null) {
+                error.append(line).append("\n");
+                if (!line.trim().isEmpty()) {
+                    logger.warn("Analysis error: {}", line);
+                }
+            }
         }
 
         MultiValueMap<String, Object> formData = new LinkedMultiValueMap<>();

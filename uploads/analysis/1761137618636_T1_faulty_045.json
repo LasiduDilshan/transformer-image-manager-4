@@ -1,8 +1,8 @@
 {
-  "image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_5_1761137910569/input/1761137618636_T1_faulty_045.jpg",
-  "boxed_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_5_1761137910569/output/boxed/1761137618636_T1_faulty_045_boxed.jpg",
-  "mask_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_5_1761137910569/output/masks/1761137618636_T1_faulty_045_mask.png",
-  "filtered_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_5_1761137910569/output/filtered/1761137618636_T1_faulty_045_filtered.png",
+  "image": "/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-3/temp/anomaly-analysis/job_5_1761137910569/input/1761137618636_T1_faulty_045.jpg",
+  "boxed_image": "/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-3/temp/anomaly-analysis/job_5_1761137910569/output/boxed/1761137618636_T1_faulty_045_boxed.jpg",
+  "mask_image": "/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-3/temp/anomaly-analysis/job_5_1761137910569/output/masks/1761137618636_T1_faulty_045_mask.png",
+  "filtered_image": "/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-3/temp/anomaly-analysis/job_5_1761137910569/output/filtered/1761137618636_T1_faulty_045_filtered.png",
   "label": "Normal",
   "boxes": [
     {

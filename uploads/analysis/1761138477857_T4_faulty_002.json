@@ -1,8 +1,8 @@
 {
-  "image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_19_1761138930726/input/1761138477857_T4_faulty_002.png",
-  "boxed_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_19_1761138930726/output/boxed/1761138477857_T4_faulty_002_boxed.png",
-  "mask_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_19_1761138930726/output/masks/1761138477857_T4_faulty_002_mask.png",
-  "filtered_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_19_1761138930726/output/filtered/1761138477857_T4_faulty_002_filtered.png",
+  "image": "/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-3/temp/anomaly-analysis/job_19_1761138930726/input/1761138477857_T4_faulty_002.png",
+  "boxed_image": "/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-3/temp/anomaly-analysis/job_19_1761138930726/output/boxed/1761138477857_T4_faulty_002_boxed.png",
+  "mask_image": "/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-3/temp/anomaly-analysis/job_19_1761138930726/output/masks/1761138477857_T4_faulty_002_mask.png",
+  "filtered_image": "/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-3/temp/anomaly-analysis/job_19_1761138930726/output/filtered/1761138477857_T4_faulty_002_filtered.png",
   "label": "Loose Joint (Faulty)",
   "boxes": [
     {

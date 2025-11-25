@@ -1,0 +1,141 @@
+{
+  "image": "/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-4/transformer-manager-backkend/temp/anomaly-analysis/job_4_1762963690266/input/1762963686999_T6_faulty_001.jpg",
+  "boxed_image": "/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-4/transformer-manager-backkend/temp/anomaly-analysis/job_4_1762963690266/output/boxed/1762963686999_T6_faulty_001_boxed.jpg",
+  "mask_image": "/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-4/transformer-manager-backkend/temp/anomaly-analysis/job_4_1762963690266/output/masks/1762963686999_T6_faulty_001_mask.png",
+  "filtered_image": "/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-4/transformer-manager-backkend/temp/anomaly-analysis/job_4_1762963690266/output/filtered/1762963686999_T6_faulty_001_filtered.png",
+  "label": "Normal",
+  "boxes": [
+    {
+      "box": [
+        684,
+        308,
+        129,
+        117
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.593
+    },
+    {
+      "box": [
+        826,
+        414,
+        175,
+        66
+      ],
+      "type": "Point Overload (Potential)",
+      "confidence": 0.521
+    },
+    {
+      "box": [
+        853,
+        312,
+        100,
+        40
+      ],
+      "type": "Point Overload (Potential)",
+      "confidence": 0.53
+    },
+    {
+      "box": [
+        851,
+        259,
+        92,
+        35
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.599
+    },
+    {
+      "box": [
+        697,
+        308,
+        16,
+        4
+      ],
+      "type": "Tiny Faulty Spot",
+      "confidence": 0.546
+    },
+    {
+      "box": [
+        728,
+        311,
+        62,
+        19
+      ],
+      "type": "Tiny Potential Spot",
+      "confidence": 0.572
+    }
+  ],
+  "feedback_adjustments": {
+    "applied": true,
+    "global_adjustment": 0.0,
+    "learning_rate": 0.0001,
+    "generated_at": "2025-11-12T21:38:10.294690500",
+    "source": "annotation_feedback",
+    "total_annotations_considered": 0,
+    "label_adjustments": {},
+    "label_feedback": [],
+    "per_box": [
+      {
+        "label": "Point Overload (Faulty)",
+        "original_confidence": 0.593,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.593
+      },
+      {
+        "label": "Point Overload (Potential)",
+        "original_confidence": 0.521,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.521
+      },
+      {
+        "label": "Point Overload (Potential)",
+        "original_confidence": 0.53,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.53
+      },
+      {
+        "label": "Point Overload (Faulty)",
+        "original_confidence": 0.599,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.599
+      },
+      {
+        "label": "Tiny Faulty Spot",
+        "original_confidence": 0.546,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.546
+      },
+      {
+        "label": "Tiny Potential Spot",
+        "original_confidence": 0.572,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.572
+      }
+    ]
+  }
+}

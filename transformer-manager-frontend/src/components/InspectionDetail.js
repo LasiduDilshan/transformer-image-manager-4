@@ -11,6 +11,8 @@ import {
   Badge,
   Image,
   Form,
+  Tabs,
+  Tab,
 } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -23,9 +25,15 @@ import {
   faPlus,
   faTimes,
   faUpload,
+  faFileAlt,
+  faHistory,
+  faImages,
+  faExclamationTriangle,
 } from "@fortawesome/free-solid-svg-icons";
 import ImageViewer from "./ImageViewer";
 import AnalysisDisplay from "./AnalysisDisplay";
+import MaintenanceRecordForm from "./MaintenanceRecordForm";
+import MaintenanceRecordsHistory from "./MaintenanceRecordsHistory";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 
@@ -37,6 +45,7 @@ const InspectionDetail = () => {
   const [transformerRecord, setTransformerRecord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState("images");
 
   // Image upload states
   const [showImageUpload, setShowImageUpload] = useState(false);
@@ -695,11 +704,74 @@ const InspectionDetail = () => {
         </Card.Body>
       </Card>
 
-      {/* Anomaly Analysis Section */}
-      <AnalysisDisplay
-        inspectionId={inspection.id}
-        images={maintenanceImages}
-      />
+      {/* Main Content Tabs */}
+      <Card className="mb-4">
+        <Card.Body>
+          <Tabs
+            activeKey={activeTab}
+            onSelect={(k) => setActiveTab(k)}
+            className="mb-3"
+          >
+            {/* Images & Analysis Tab */}
+            <Tab
+              eventKey="images"
+              title={
+                <>
+                  <FontAwesomeIcon icon={faImages} className="me-2" />
+                  Images & Analysis
+                </>
+              }
+            >
+              {/* Anomaly Analysis Section */}
+              <AnalysisDisplay
+                inspectionId={inspection.id}
+                images={maintenanceImages}
+              />
+            </Tab>
+
+            {/* Maintenance Record Form Tab */}
+            <Tab
+              eventKey="maintenance"
+              title={
+                <>
+                  <FontAwesomeIcon icon={faFileAlt} className="me-2" />
+                  Maintenance Record
+                </>
+              }
+            >
+              <MaintenanceRecordForm
+                inspectionId={inspection.id}
+                inspection={inspection}
+              />
+            </Tab>
+
+            {/* Maintenance History Tab */}
+            <Tab
+              eventKey="history"
+              title={
+                <>
+                  <FontAwesomeIcon icon={faHistory} className="me-2" />
+                  Maintenance History
+                </>
+              }
+            >
+              {transformerRecord?.id ? (
+                <MaintenanceRecordsHistory
+                  transformerId={transformerRecord.id}
+                />
+              ) : (
+                <Alert variant="info">
+                  <FontAwesomeIcon
+                    icon={faExclamationTriangle}
+                    className="me-2"
+                  />
+                  No transformer record associated with this inspection.
+                </Alert>
+              )}
+            </Tab>
+          </Tabs>
+        </Card.Body>
+      </Card>
 
       {/* Image Upload Modal */}
       <Modal
