@@ -19,6 +19,7 @@ import {
   faCheckCircle,
   faDownload,
   faFileExcel,
+  faFilePdf,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../AuthContext";
 
@@ -30,6 +31,7 @@ const MaintenanceRecordsHistory = ({ transformerId }) => {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [pdfDownloadingId, setPdfDownloadingId] = useState(null);
 
   useEffect(() => {
     fetchRecords();
@@ -254,6 +256,37 @@ const MaintenanceRecordsHistory = ({ transformerId }) => {
     }
   };
 
+  const handleDownloadRecordPdf = async (recordId) => {
+    if (!recordId) return;
+    try {
+      setPdfDownloadingId(recordId);
+      const response = await axios.get(
+        `http://localhost:8080/api/maintenance-records/${recordId}/export/pdf`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+          responseType: "blob",
+        }
+      );
+
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const timestamp = new Date().toISOString().split("T")[0];
+      link.href = url;
+      link.download = `maintenance_record_${recordId}_${timestamp}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error downloading PDF:", err);
+      setError("Failed to download PDF file");
+    } finally {
+      setPdfDownloadingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center p-5">
@@ -375,6 +408,30 @@ const MaintenanceRecordsHistory = ({ transformerId }) => {
                       >
                         <FontAwesomeIcon icon={faDownload} className="me-1" />
                         CSV
+                      </Button>
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
+                        className="ms-2"
+                        disabled={pdfDownloadingId === record.id}
+                        onClick={() => handleDownloadRecordPdf(record.id)}
+                      >
+                        {pdfDownloadingId === record.id ? (
+                          <>
+                            <Spinner
+                              as="span"
+                              animation="border"
+                              size="sm"
+                              className="me-2"
+                            />
+                            Preparing...
+                          </>
+                        ) : (
+                          <>
+                            <FontAwesomeIcon icon={faFilePdf} className="me-1" />
+                            PDF
+                          </>
+                        )}
                       </Button>
                     </td>
                   </tr>
@@ -752,6 +809,23 @@ const MaintenanceRecordsHistory = ({ transformerId }) => {
           >
             <FontAwesomeIcon icon={faDownload} className="me-2" />
             Download as CSV
+          </Button>
+          <Button
+            variant="danger"
+            disabled={!selectedRecord || pdfDownloadingId === selectedRecord?.id}
+            onClick={() => handleDownloadRecordPdf(selectedRecord?.id)}
+          >
+            {pdfDownloadingId === selectedRecord?.id ? (
+              <>
+                <Spinner as="span" animation="border" size="sm" className="me-2" />
+                Generating PDF...
+              </>
+            ) : (
+              <>
+                <FontAwesomeIcon icon={faFilePdf} className="me-2" />
+                Download as PDF
+              </>
+            )}
           </Button>
           <Button variant="secondary" onClick={() => setShowDetailModal(false)}>
             Close

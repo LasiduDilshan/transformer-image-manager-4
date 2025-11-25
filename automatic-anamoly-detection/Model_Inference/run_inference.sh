@@ -2,7 +2,7 @@
 # Runs inference_core_local.py using an EXISTING local venv (Linux/WSL).
 #
 # Run this inside WSL (Ubuntu). From Windows PowerShell, you can do:
-#   wsl --cd "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/automatic-anamoly-detection/Model_Inference" -- ./run_inference.sh [args]
+#   wsl --cd "/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-3/automatic-anamoly-detection/Model_Inference" -- ./run_inference.sh [args]
 #
 # Usage (inside WSL):
 #   ./run_inference.sh [--install] [--input <path>] [--outdir <dir>] [--config <yaml>] [--ckpt <ckpt>] [--size N] [--cpu] [--venv <path>] [--sensitivity <float>]
@@ -64,7 +64,7 @@ if [[ ! -d "$VENV_PATH" ]]; then
   echo "[ERROR] Virtual environment not found." >&2
   echo "        Tried: '$VENV_PATH' (and '../.venv')." >&2
   echo "        Provide one via --venv /path/to/venv or env VENV=/path/to/venv." >&2
-  echo "        VENV='/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/automatic-anamoly-detection/.venv' ./run_inference.sh" >&2
+  echo "        VENV='/mnt/c/Users/pasir/Desktop/Github/transformer-image-manager-3/automatic-anamoly-detection/.venv' ./run_inference.sh" >&2
   exit 1 
 fi
 

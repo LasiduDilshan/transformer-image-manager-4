@@ -5,7 +5,10 @@ import com.example.transformer_manager_backkend.entity.MaintenanceRecord;
 import com.example.transformer_manager_backkend.entity.User;
 import com.example.transformer_manager_backkend.repository.AdminRepository;
 import com.example.transformer_manager_backkend.repository.UserRepository;
+import com.example.transformer_manager_backkend.service.MaintenanceRecordPdfService;
 import com.example.transformer_manager_backkend.service.MaintenanceRecordService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -21,13 +24,16 @@ import java.util.Optional;
 public class MaintenanceRecordController {
 
     private final MaintenanceRecordService maintenanceRecordService;
+    private final MaintenanceRecordPdfService maintenanceRecordPdfService;
     private final AdminRepository adminRepository;
     private final UserRepository userRepository;
 
     public MaintenanceRecordController(MaintenanceRecordService maintenanceRecordService,
+                                      MaintenanceRecordPdfService maintenanceRecordPdfService,
                                       AdminRepository adminRepository,
                                       UserRepository userRepository) {
         this.maintenanceRecordService = maintenanceRecordService;
+        this.maintenanceRecordPdfService = maintenanceRecordPdfService;
         this.adminRepository = adminRepository;
         this.userRepository = userRepository;
     }
@@ -81,6 +87,16 @@ public class MaintenanceRecordController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     public ResponseEntity<List<MaintenanceRecord>> getAllMaintenanceRecords() {
         return ResponseEntity.ok(maintenanceRecordService.getAllMaintenanceRecords());
+    }
+
+    @GetMapping("/{id}/export/pdf")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<byte[]> exportMaintenanceRecordPdf(@PathVariable Long id) {
+        byte[] pdf = maintenanceRecordPdfService.generatePdf(id);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=maintenance_record_" + id + ".pdf")
+                .body(pdf);
     }
 
     @GetMapping("/status/{status}")
