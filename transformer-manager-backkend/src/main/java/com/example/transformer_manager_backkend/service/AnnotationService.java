@@ -195,13 +195,13 @@ public class AnnotationService {
      */
     @Transactional(readOnly = true)
     public Optional<String> generateAnnotationReport(Long analysisJobId) {
-        Optional<Annotation> annotationOpt = annotationRepository.findByAnalysisJobId(analysisJobId);
-        if (annotationOpt.isEmpty()) {
-            return Optional.empty();
-        }
-
-        Annotation annotation = annotationOpt.get();
         try {
+            Optional<Annotation> annotationOpt = annotationRepository.findByAnalysisJobId(analysisJobId);
+            if (annotationOpt.isEmpty()) {
+                return generateAutoReportFromJob(analysisJobId);
+            }
+
+            Annotation annotation = annotationOpt.get();
             ObjectNode root = objectMapper.createObjectNode();
             root.put("reportGeneratedAt", LocalDateTime.now().toString());
             root.put("analysisJobId", analysisJobId);
@@ -333,6 +333,86 @@ public class AnnotationService {
     }
 
     /**
+     * Build a minimal report directly from the analysis job when no annotation exists yet.
+     */
+    private Optional<String> generateAutoReportFromJob(Long analysisJobId) {
+        Optional<AnalysisJob> jobOpt = analysisJobRepository.findById(analysisJobId);
+        if (jobOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        AnalysisJob job = jobOpt.get();
+        try {
+            ObjectNode root = objectMapper.createObjectNode();
+            root.put("reportGeneratedAt", LocalDateTime.now().toString());
+            root.put("analysisJobId", analysisJobId);
+            root.put("annotationId", (Long) null);
+            root.put("annotationType", "AUTO_GENERATED");
+            root.put("comments", "");
+
+            ObjectNode jobNode = root.putObject("analysisJob");
+            jobNode.put("status", job.getStatus() != null ? job.getStatus().name() : "UNKNOWN");
+            if (job.getCompletedAt() != null) {
+                jobNode.put("completedAt", job.getCompletedAt().toString());
+            }
+            if (job.getStartedAt() != null) {
+                jobNode.put("startedAt", job.getStartedAt().toString());
+            }
+            if (job.getResultJson() != null) {
+                jobNode.put("resultJsonLength", job.getResultJson().length());
+            }
+            if (job.getBoxedImagePath() != null) {
+                jobNode.put("boxedImagePath", job.getBoxedImagePath());
+            }
+            if (job.getImage() != null) {
+                Image image = job.getImage();
+                ObjectNode imageNode = jobNode.putObject("image");
+                imageNode.put("id", image.getId());
+                if (image.getFilePath() != null) {
+                    imageNode.put("filePath", image.getFilePath());
+                }
+                if (image.getType() != null) {
+                    imageNode.put("type", image.getType());
+                }
+                if (image.getInspection() != null) {
+                    imageNode.put("inspectionId", image.getInspection().getId());
+                }
+                if (image.getTransformerRecord() != null) {
+                    imageNode.put("transformerId", image.getTransformerRecord().getId());
+                }
+            }
+
+            JsonNode detections = readJsonSafely(job.getResultJson());
+            root.set("originalAIDetections", detections);
+            root.set("finalUserAnnotations", detections);
+
+            int boxesCount = countBoxes(detections);
+
+            ArrayNode boxesArray = objectMapper.createArrayNode();
+            if (detections != null && detections.has("boxes") && detections.get("boxes").isArray()) {
+                for (JsonNode box : detections.get("boxes")) {
+                    boxesArray.add(box);
+                }
+            }
+            root.set("annotationBoxes", boxesArray);
+
+            ObjectNode summaryNode = root.putObject("summary");
+            summaryNode.put("totalBoxes", boxesCount);
+            summaryNode.put("addedBoxes", 0);
+            summaryNode.put("modifiedBoxes", 0);
+            summaryNode.put("deletedBoxes", 0);
+            summaryNode.put("unchangedBoxes", boxesCount);
+            summaryNode.put("annotatorType", "SYSTEM");
+            summaryNode.put("annotatorName", "System (auto)");
+            summaryNode.put("commentsProvided", false);
+
+            return Optional.of(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(root));
+        } catch (Exception e) {
+            logger.error("Failed to generate auto annotation report for analysis job {}", analysisJobId, e);
+            return Optional.empty();
+        }
+    }
+
+    /**
      * Get annotation by analysis job ID
      */
     public Optional<Annotation> getAnnotationByAnalysisJobId(Long analysisJobId) {
@@ -424,6 +504,14 @@ public class AnnotationService {
             logger.error("Error parsing JSON to annotation boxes", e);
         }
         return boxes;
+    }
+
+    private int countBoxes(JsonNode detections) {
+        if (detections == null) {
+            return 0;
+        }
+        JsonNode boxesNode = detections.get("boxes");
+        return boxesNode != null && boxesNode.isArray() ? boxesNode.size() : 0;
     }
 
     /**

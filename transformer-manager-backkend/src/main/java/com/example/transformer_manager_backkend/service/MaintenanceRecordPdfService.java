@@ -8,20 +8,29 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.transformer_manager_backkend.entity.AnalysisJob;
+import com.example.transformer_manager_backkend.entity.Annotation;
+import com.example.transformer_manager_backkend.entity.AnnotationBox;
 import com.example.transformer_manager_backkend.entity.Image;
 import com.example.transformer_manager_backkend.entity.Inspection;
 import com.example.transformer_manager_backkend.entity.MaintenanceRecord;
 import com.example.transformer_manager_backkend.entity.TransformerRecord;
 import com.example.transformer_manager_backkend.repository.MaintenanceRecordRepository;
+import com.example.transformer_manager_backkend.service.AnnotationService;
 import com.lowagie.text.BadElementException;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
@@ -47,6 +56,7 @@ public class MaintenanceRecordPdfService {
     private static final Font SUMMARY_LABEL_FONT;
     private static final Font SUMMARY_VALUE_FONT;
     private static final Font CAPTION_FONT;
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     static {
         SUMMARY_LABEL_FONT = FontFactory.getFont(FontFactory.HELVETICA, 9, Font.BOLD);
@@ -60,13 +70,16 @@ public class MaintenanceRecordPdfService {
     }
 
     private final MaintenanceRecordRepository maintenanceRecordRepository;
+    private final AnnotationService annotationService;
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm", Locale.ENGLISH);
 
     @Value("${upload.directory}")
     private String uploadDirectory;
 
-    public MaintenanceRecordPdfService(MaintenanceRecordRepository maintenanceRecordRepository) {
+    public MaintenanceRecordPdfService(MaintenanceRecordRepository maintenanceRecordRepository,
+            AnnotationService annotationService) {
         this.maintenanceRecordRepository = maintenanceRecordRepository;
+        this.annotationService = annotationService;
     }
 
     @Transactional(readOnly = true)
@@ -88,18 +101,24 @@ public class MaintenanceRecordPdfService {
             addTransformerSection(document, record);
             addElectricalSection(document, record);
             addMaintenanceSection(document, record);
-            addAnalysisSummary(document, record);
-            List<Path> maintenanceImages = collectMaintenanceImages(record);
-            List<Path> annotatedImages = collectAnnotatedImages(record);
+            List<Image> maintenanceImages = Optional.ofNullable(record.getInspection())
+                    .map(Inspection::getImages)
+                    .orElse(List.of())
+                    .stream()
+                    .filter(img -> img != null && "Maintenance".equalsIgnoreCase(img.getType()))
+                    .toList();
+            Map<Long, String> maintenanceLabelMap = buildMaintenanceLabelMap(maintenanceImages);
             List<Path> baselineImages = collectBaselineImages(record);
+            List<Path> maintenanceAnnotatedImages = collectMaintenanceAnnotatedImages(maintenanceImages);
 
-            if (!maintenanceImages.isEmpty() || !annotatedImages.isEmpty() || !baselineImages.isEmpty()) {
+            if (!baselineImages.isEmpty() || !maintenanceAnnotatedImages.isEmpty()) {
+                addImageSection(document, "Baseline Images", baselineImages, "baseline");
+                addImageSection(document, "Maintenance / Annotated Images", maintenanceAnnotatedImages, "maintenance");
                 document.newPage();
             }
 
-            addImageSection(document, "Maintenance Images", maintenanceImages);
-            addImageSection(document, "Annotated Images", annotatedImages);
-            addImageSection(document, "Baseline Images", baselineImages);
+            addAnalysisSummary(document, record, maintenanceLabelMap);
+            addAnnotationHistoryTable(document, maintenanceImages, maintenanceLabelMap);
 
             document.close();
             return baos.toByteArray();
@@ -185,10 +204,25 @@ public class MaintenanceRecordPdfService {
         addParagraph(document, "Additional Remarks", record.getAdditionalRemarks());
     }
 
-    private void addAnalysisSummary(Document document, MaintenanceRecord record) throws DocumentException {
+    private Map<Long, String> buildMaintenanceLabelMap(List<Image> maintenanceImages) {
+        Map<Long, String> map = new LinkedHashMap<>();
+        int index = 1;
+        for (Image image : maintenanceImages) {
+            if (image != null && image.getId() != null) {
+                map.put(image.getId(), "maintenance_" + index);
+                index++;
+            }
+        }
+        return map;
+    }
+
+    private void addAnalysisSummary(Document document, MaintenanceRecord record, Map<Long, String> maintenanceLabelMap) throws DocumentException {
         List<Image> maintenanceImages = Optional.ofNullable(record.getInspection())
                 .map(Inspection::getImages)
-                .orElse(List.of());
+                .orElse(List.of())
+                .stream()
+                .filter(img -> img != null && "Maintenance".equalsIgnoreCase(img.getType()))
+                .toList();
 
         boolean hasAnalysis = maintenanceImages.stream().anyMatch(img -> img.getAnalysisJob() != null);
         document.add(makeSectionHeader("Anomaly Analysis"));
@@ -198,26 +232,93 @@ public class MaintenanceRecordPdfService {
             return;
         }
 
-        PdfPTable table = new PdfPTable(new float[] { 1, 1, 1 });
+        PdfPTable table = new PdfPTable(new float[] { 1.1f, 0.8f, 2f, 2.2f });
         table.setWidthPercentage(100);
         addHeaderCell(table, "Image");
         addHeaderCell(table, "Status");
-        addHeaderCell(table, "Analysis Result");
+        addHeaderCell(table, "Anomalies (type & confidence)");
+        addHeaderCell(table, "Annotations / History");
 
         for (Image image : maintenanceImages) {
             AnalysisJob job = image.getAnalysisJob();
             if (job == null) {
                 continue;
             }
-            table.addCell(createBodyCell(extractFileName(image.getFilePath())));
+            String friendlyLabel = maintenanceLabelMap.getOrDefault(image.getId(), extractFileName(image.getFilePath()));
+            table.addCell(createBodyCell(friendlyLabel));
             table.addCell(createBodyCell(job.getStatus() != null ? job.getStatus().name() : NOT_AVAILABLE));
-            table.addCell(createBodyCell(shorten(job.getResultJson())));
+            table.addCell(createAnomalyCell(job.getResultJson()));
+            table.addCell(createAnnotationDetailsCell(job, friendlyLabel));
         }
         table.setSpacingAfter(12f);
         document.add(table);
     }
 
-    private void addImageSection(Document document, String title, List<Path> images) throws DocumentException {
+    private void addAnnotationHistoryTable(Document document, List<Image> maintenanceImages, Map<Long, String> maintenanceLabelMap)
+            throws DocumentException {
+        document.add(makeSectionHeader("Annotation Details"));
+
+        if (maintenanceImages.isEmpty()) {
+            document.add(new Paragraph("No maintenance images available for annotations.", BODY_FONT));
+            document.add(new Paragraph(" "));
+            return;
+        }
+
+        PdfPTable table = new PdfPTable(new float[] { 1f, 0.8f, 0.8f, 1.2f, 1.6f, 1f });
+        table.setWidthPercentage(100);
+        addHeaderCell(table, "Image");
+        addHeaderCell(table, "Annotated By");
+        addHeaderCell(table, "Type");
+        addHeaderCell(table, "Comments");
+        addHeaderCell(table, "Boxes");
+        addHeaderCell(table, "Updated");
+
+        boolean anyRow = false;
+        for (Image image : maintenanceImages) {
+            if (image == null || image.getId() == null) {
+                continue;
+            }
+            AnalysisJob job = image.getAnalysisJob();
+            Annotation annotation = job != null
+                    ? annotationService.getAnnotationByAnalysisJobId(job.getId()).orElse(null)
+                    : null;
+
+            String imageLabel = maintenanceLabelMap.getOrDefault(image.getId(), "maintenance");
+            table.addCell(createBodyCell(imageLabel));
+            if (annotation == null) {
+                table.addCell(createBodyCell("N/A"));
+                table.addCell(createBodyCell("None"));
+                table.addCell(createBodyCell("No comments"));
+                table.addCell(createBodyCell("0"));
+                table.addCell(createBodyCell("N/A"));
+            } else {
+                table.addCell(createBodyCell(annotation.getAnnotatorDisplayName()));
+                table.addCell(createBodyCell(annotation.getAnnotationType().name()));
+                table.addCell(createBodyCell(
+                        annotation.getComments() != null && !annotation.getComments().isBlank()
+                                ? annotation.getComments()
+                                : "No comments"));
+
+                List<AnnotationBox> boxes = annotation.getAnnotationBoxes();
+                String boxSummary = summarizeChangedBoxes(boxes);
+                table.addCell(createBoxListCell(boxes));
+                table.addCell(createBodyCell(
+                        formatDate(annotation.getUpdatedAt() != null ? annotation.getUpdatedAt() : annotation.getCreatedAt())));
+            }
+            anyRow = true;
+        }
+
+        if (!anyRow) {
+            document.add(new Paragraph("No annotations available.", BODY_FONT));
+            document.add(new Paragraph(" "));
+            return;
+        }
+
+        table.setSpacingAfter(12f);
+        document.add(table);
+    }
+
+    private void addImageSection(Document document, String title, List<Path> images, String labelPrefix) throws DocumentException {
         document.add(makeSectionHeader(title));
         if (images.isEmpty()) {
             document.add(new Paragraph("Not available", BODY_FONT));
@@ -229,8 +330,10 @@ public class MaintenanceRecordPdfService {
         imageTable.setWidthPercentage(100);
         imageTable.setSpacingAfter(12f);
 
-        for (Path path : images) {
-            imageTable.addCell(createImageCell(path));
+        for (int i = 0; i < images.size(); i++) {
+            Path path = images.get(i);
+            String caption = String.format("%s_%d", labelPrefix, i + 1);
+            imageTable.addCell(createImageCell(path, caption));
         }
 
         if (images.size() % 2 != 0) {
@@ -242,39 +345,21 @@ public class MaintenanceRecordPdfService {
         document.add(imageTable);
     }
 
-    private List<Path> collectMaintenanceImages(MaintenanceRecord record) {
-        return Optional.ofNullable(record.getInspection())
-                .map(Inspection::getImages)
-                .orElse(List.of())
-                .stream()
-                .map(Image::getFilePath)
-                .map(this::resolveUploadsPath)
-                .flatMap(Optional::stream)
-                .toList();
-    }
-
-    private List<Path> collectAnnotatedImages(MaintenanceRecord record) {
-        List<Path> annotated = new ArrayList<>();
-        List<Image> maintenanceImages = Optional.ofNullable(record.getInspection())
-                .map(Inspection::getImages)
-                .orElse(List.of());
+    private List<Path> collectMaintenanceAnnotatedImages(List<Image> maintenanceImages) {
+        Set<Path> collected = new LinkedHashSet<>();
 
         for (Image image : maintenanceImages) {
             AnalysisJob job = image.getAnalysisJob();
-            boolean added = false;
             if (job != null && job.getBoxedImagePath() != null) {
-                Optional<Path> boxedPath = resolveUploadsPath(job.getBoxedImagePath());
-                if (boxedPath.isPresent()) {
-                    annotated.add(boxedPath.get());
-                    added = true;
-                }
+                resolveUploadsPath(job.getBoxedImagePath()).ifPresent(collected::add);
+                continue;
             }
 
-            if (!added) {
-                deriveBoxedPathFromOriginal(image).ifPresent(annotated::add);
-            }
+            deriveBoxedPathFromOriginal(image).ifPresent(collected::add);
+
+            resolveUploadsPath(image.getFilePath()).ifPresent(collected::add);
         }
-        return annotated;
+        return new ArrayList<>(collected);
     }
 
     private List<Path> collectBaselineImages(MaintenanceRecord record) {
@@ -331,7 +416,7 @@ public class MaintenanceRecordPdfService {
         return cell;
     }
 
-    private PdfPCell createImageCell(Path path) {
+    private PdfPCell createImageCell(Path path, String captionText) {
         PdfPCell cell = new PdfPCell();
         cell.setBorder(Rectangle.NO_BORDER);
         cell.setPadding(8f);
@@ -346,7 +431,7 @@ public class MaintenanceRecordPdfService {
             cell.addElement(new Paragraph("Image unavailable (" + path.getFileName() + ")", BODY_FONT));
         }
 
-        Paragraph caption = new Paragraph(path.getFileName().toString(), CAPTION_FONT);
+        Paragraph caption = new Paragraph(captionText != null ? captionText : path.getFileName().toString(), CAPTION_FONT);
         caption.setAlignment(Paragraph.ALIGN_CENTER);
         caption.setSpacingBefore(4f);
         cell.addElement(caption);
@@ -365,6 +450,109 @@ public class MaintenanceRecordPdfService {
         Paragraph paragraph = new Paragraph(label + ": " + safeValue(value), BODY_FONT);
         paragraph.setSpacingAfter(4f);
         document.add(paragraph);
+    }
+
+    private PdfPCell createAnomalyCell(String resultJson) {
+        PdfPCell cell = new PdfPCell();
+        cell.setPadding(6f);
+        AnomalySummary summary = extractAnomalySummary(resultJson);
+
+        if (summary.label != null) {
+            Paragraph labelParagraph = new Paragraph("Label: " + summary.label, CELL_FONT);
+            labelParagraph.setSpacingAfter(4f);
+            cell.addElement(labelParagraph);
+        }
+
+        if (!summary.anomalies.isEmpty()) {
+            for (String text : summary.anomalies) {
+                cell.addElement(new Paragraph("\u2022 " + text, CELL_FONT));
+            }
+        } else {
+            cell.addElement(new Paragraph("No anomalies detected", CELL_FONT));
+        }
+        return cell;
+    }
+
+    private PdfPCell createAnnotationDetailsCell(AnalysisJob job, String imageLabel) {
+        PdfPCell cell = new PdfPCell();
+        cell.setPadding(6f);
+
+        if (job == null) {
+            cell.addElement(new Paragraph("No analysis job", CELL_FONT));
+            return cell;
+        }
+
+        Annotation annotation = annotationService.getAnnotationByAnalysisJobId(job.getId()).orElse(null);
+        if (annotation == null) {
+            cell.addElement(new Paragraph("No annotations yet", CELL_FONT));
+            return cell;
+        }
+
+        cell.addElement(new Paragraph("Image: " + safeValue(imageLabel), CELL_FONT));
+        cell.addElement(new Paragraph("Type: " + annotation.getAnnotationType().name(), CELL_FONT));
+        if (annotation.getComments() != null && !annotation.getComments().isBlank()) {
+            Paragraph comments = new Paragraph("Comments: " + annotation.getComments(), CELL_FONT);
+            comments.setSpacingAfter(4f);
+            cell.addElement(comments);
+        }
+
+        List<AnnotationBox> boxes = annotation.getAnnotationBoxes();
+        if (boxes != null && !boxes.isEmpty()) {
+            int max = Math.min(8, boxes.size());
+            for (int i = 0; i < max; i++) {
+                AnnotationBox box = boxes.get(i);
+                String action = box.getAction() != null ? box.getAction().name() : "UNCHANGED";
+                String type = box.getType() != null ? box.getType() : "Annotation";
+                String confidence = box.getConfidence() != null
+                        ? String.format(Locale.ENGLISH, "%.2f", box.getConfidence())
+                        : "N/A";
+                cell.addElement(new Paragraph(
+                        String.format(Locale.ENGLISH, "%d) %s (conf %s) [%s]", i + 1, type, confidence, action),
+                        CELL_FONT));
+            }
+            if (boxes.size() > max) {
+                cell.addElement(new Paragraph(
+                        String.format(Locale.ENGLISH, "... plus %d more boxes", boxes.size() - max), CAPTION_FONT));
+            }
+        } else {
+            cell.addElement(new Paragraph("No boxes recorded", CELL_FONT));
+        }
+
+        Paragraph updated = new Paragraph(
+                "Updated: " + formatDate(annotation.getUpdatedAt() != null ? annotation.getUpdatedAt() : annotation.getCreatedAt()),
+                CAPTION_FONT);
+        updated.setSpacingBefore(4f);
+        cell.addElement(updated);
+
+        return cell;
+    }
+
+    private AnomalySummary extractAnomalySummary(String resultJson) {
+        if (resultJson == null || resultJson.isBlank()) {
+            return new AnomalySummary(null, List.of());
+        }
+        try {
+            JsonNode root = OBJECT_MAPPER.readTree(resultJson);
+            String label = root.path("label").asText(null);
+            List<String> anomalies = new ArrayList<>();
+
+            JsonNode boxes = root.path("boxes");
+            if (boxes.isArray()) {
+                for (int i = 0; i < boxes.size(); i++) {
+                    JsonNode box = boxes.get(i);
+                    String type = box.path("type").asText("Anomaly");
+                    double confidence = box.path("confidence").asDouble(0);
+                    anomalies.add(String.format(Locale.ENGLISH, "%s (%.1f%%)", type, confidence * 100));
+                    if (anomalies.size() >= 6) {
+                        break;
+                    }
+                }
+            }
+
+            return new AnomalySummary(label, anomalies);
+        } catch (IOException parseError) {
+            return new AnomalySummary(null, List.of("Result unavailable"));
+        }
     }
 
     private String safeValue(String value) {
@@ -390,14 +578,6 @@ public class MaintenanceRecordPdfService {
         return String.format(Locale.ENGLISH, "%.5f, %.5f",
                 transformerRecord.getLocationLat(),
                 transformerRecord.getLocationLng());
-    }
-
-    private String shorten(String text) {
-        if (text == null || text.isBlank()) {
-            return NOT_AVAILABLE;
-        }
-        String trimmed = text.trim();
-        return trimmed.length() <= 120 ? trimmed : trimmed.substring(0, 117) + "...";
     }
 
     private Optional<Path> deriveBoxedPathFromOriginal(Image image) {
@@ -453,5 +633,64 @@ public class MaintenanceRecordPdfService {
         String normalized = path.replace("\\", "/");
         int index = normalized.lastIndexOf('/');
         return index >= 0 ? normalized.substring(index + 1) : normalized;
+    }
+
+    private static class AnomalySummary {
+        private final String label;
+        private final List<String> anomalies;
+
+        private AnomalySummary(String label, List<String> anomalies) {
+            this.label = label;
+            this.anomalies = anomalies;
+        }
+    }
+
+    private String summarizeChangedBoxes(List<AnnotationBox> boxes) {
+        if (boxes == null || boxes.isEmpty()) {
+            return "No boxes";
+        }
+        List<AnnotationBox> changed = boxes.stream()
+                .filter(b -> b.getAction() != null && b.getAction() != AnnotationBox.BoxAction.UNCHANGED)
+                .toList();
+        if (changed.isEmpty()) {
+            return "No user changes";
+        }
+        return String.format(Locale.ENGLISH, "%d change(s)", changed.size());
+    }
+
+    private PdfPCell createBoxListCell(List<AnnotationBox> boxes) {
+        PdfPCell cell = new PdfPCell();
+        cell.setPadding(6f);
+        if (boxes == null || boxes.isEmpty()) {
+            cell.addElement(new Paragraph("No boxes", CELL_FONT));
+            return cell;
+        }
+        List<AnnotationBox> changed = boxes.stream()
+                .filter(b -> b.getAction() != null && b.getAction() != AnnotationBox.BoxAction.UNCHANGED)
+                .toList();
+        if (changed.isEmpty()) {
+            cell.addElement(new Paragraph("No user changes", CELL_FONT));
+            return cell;
+        }
+        int preview = Math.min(5, changed.size());
+        for (int i = 0; i < preview; i++) {
+            AnnotationBox box = changed.get(i);
+            String type = box.getType() != null ? box.getType() : "Box";
+            String action = box.getAction() != null ? box.getAction().name() : "UNCHANGED";
+            String confidence = box.getConfidence() != null
+                    ? String.format(Locale.ENGLISH, "%.2f", box.getConfidence())
+                    : "N/A";
+            Paragraph line = new Paragraph(
+                    String.format(Locale.ENGLISH, "%d) %s [%s] conf %s", i + 1, type, action, confidence),
+                    CELL_FONT);
+            line.setSpacingAfter(2f);
+            cell.addElement(line);
+        }
+        if (changed.size() > preview) {
+            cell.addElement(new Paragraph(
+                    String.format(Locale.ENGLISH, "... plus %d more", changed.size() - preview),
+                    CAPTION_FONT));
+        }
+        return cell;
     }
 }
