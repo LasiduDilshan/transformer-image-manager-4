@@ -735,7 +735,7 @@ Maintenance records can be exported in multiple formats:
 ## 📁 Project Structure
 
 ```
-transformer-image-manager-2/
+transformer-image-manager-4/
 ├── transformer-manager-frontend/          # React Frontend
 │   ├── src/
 │   │   ├── components/                    # React Components
@@ -749,9 +749,9 @@ transformer-image-manager-2/
 │   │   ├── SettingsContext.js            # ML settings state management
 │   │   └── App.js                        # Main application
 │   └── package.json                      # Node.js dependencies
-│
-├── transformer-manager-backkend/          # Spring Boot Backend
-│   ├── src/main/java/com/example/transformer_manager_backkend/
+
+├── transformer-manager-backend/          # Spring Boot Backend
+│   ├── src/main/java/com/example/transformer_manager_backend/
 │   │   ├── controller/                   # REST Controllers
 │   │   │   ├── AnnotationController.java # Annotation CRUD and export APIs
 │   │   │   ├── AnomalyAnalysisController.java
@@ -770,8 +770,8 @@ transformer-image-manager-2/
 │   │       ├── AnnotationRepository.java # Annotation data access
 │   │       └── AnnotationBoxRepository.java # Bounding box operations
 │   └── pom.xml                          # Maven dependencies
-│
-├── automatic-anamoly-detection/           # ML Engine
+
+├── automatic-anomaly-detection/           # ML Engine
 │   ├── Model_Inference/                  # Inference Pipeline
 │   │   ├── inference_core_local.py      # Main ML processing script
 │   │   ├── run_inference.sh             # Linux execution script
@@ -780,11 +780,11 @@ transformer-image-manager-2/
 │   │   └── model_weights/               # Pre-trained model files
 │   ├── ml_model.md                      # ML model documentation
 │   └── wsl_setup.md                     # WSL environment setup
-│
+
 ├── uploads/                             # File storage
 │   └── analysis/                        # Processed images with bounding boxes
 └── temp/                               # Temporary processing workspace
-    └── anomaly-analysis/               # Annotation session workspaces
+  └── anomaly-analysis/               # Annotation session workspaces
 ```
 
 ## 🚀 Quick Start Guide
