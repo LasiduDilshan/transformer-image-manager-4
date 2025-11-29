@@ -1,0 +1,165 @@
+{
+  "image": "/tmp/patchcore_api_tbjr4w8t/1764437974060_T3_faulty_001.png",
+  "boxed_image": "/tmp/patchcore_api_tbjr4w8t/outputs/boxed/1764437974060_T3_faulty_001_boxed.png",
+  "mask_image": "/tmp/patchcore_api_tbjr4w8t/outputs/masks/1764437974060_T3_faulty_001_mask.png",
+  "filtered_image": "/tmp/patchcore_api_tbjr4w8t/outputs/filtered/1764437974060_T3_faulty_001_filtered.png",
+  "label": "Unknown",
+  "boxes": [
+    {
+      "box": [
+        41,
+        78,
+        42,
+        61
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.694
+    },
+    {
+      "box": [
+        212,
+        36,
+        19,
+        32
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.69
+    }
+  ],
+  "feedback_adjustments": {
+    "applied": true,
+    "global_adjustment": 0.00331,
+    "learning_rate": 0.01,
+    "generated_at": "2025-11-29T23:09:42.689459900",
+    "source": "annotation_feedback",
+    "total_annotations_considered": 2,
+    "label_adjustments": {
+      "Point Overload (Potential)": {
+        "adjustment": 0.0,
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "samples": 1
+      },
+      "Tiny Potential Spot": {
+        "adjustment": 0.0,
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "samples": 2
+      },
+      "Loose Joint (Faulty)": {
+        "adjustment": -0.002138759765604114,
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": -0.712919921868038,
+        "avg_confidence_delta": 0.0,
+        "samples": 2
+      },
+      "Full Wire Overload (Faulty)": {
+        "adjustment": 0.008,
+        "avg_count_delta": 1.0,
+        "avg_area_ratio": 1.0,
+        "avg_confidence_delta": 0.0,
+        "samples": 1
+      },
+      "Point Overload (Faulty)": {
+        "adjustment": 0.0,
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "samples": 2
+      },
+      "Tiny Faulty Spot": {
+        "adjustment": 0.013999999999999999,
+        "avg_count_delta": 1.0,
+        "avg_area_ratio": 3.0,
+        "avg_confidence_delta": 0.0,
+        "samples": 1
+      }
+    },
+    "label_feedback": [
+      {
+        "label": "Point Overload (Potential)",
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "adjustment": 0.0,
+        "samples": 1
+      },
+      {
+        "label": "Tiny Potential Spot",
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "adjustment": 0.0,
+        "samples": 2
+      },
+      {
+        "label": "Loose Joint (Faulty)",
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": -0.712919921868038,
+        "avg_confidence_delta": 0.0,
+        "adjustment": -0.002138759765604114,
+        "samples": 2
+      },
+      {
+        "label": "Full Wire Overload (Faulty)",
+        "avg_count_delta": 1.0,
+        "avg_area_ratio": 1.0,
+        "avg_confidence_delta": 0.0,
+        "adjustment": 0.008,
+        "samples": 1
+      },
+      {
+        "label": "Point Overload (Faulty)",
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "adjustment": 0.0,
+        "samples": 2
+      },
+      {
+        "label": "Tiny Faulty Spot",
+        "avg_count_delta": 1.0,
+        "avg_area_ratio": 3.0,
+        "avg_confidence_delta": 0.0,
+        "adjustment": 0.013999999999999999,
+        "samples": 1
+      }
+    ],
+    "per_box": [
+      {
+        "label": "Point Overload (Faulty)",
+        "original_confidence": 0.691,
+        "adjustment": 0.00331,
+        "components": {
+          "global": 0.00331,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.694,
+        "source_metrics": {
+          "avg_count_delta": 0.0,
+          "avg_area_ratio": 0.0,
+          "avg_confidence_delta": 0.0,
+          "samples": 2
+        }
+      },
+      {
+        "label": "Point Overload (Faulty)",
+        "original_confidence": 0.687,
+        "adjustment": 0.00331,
+        "components": {
+          "global": 0.00331,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.69,
+        "source_metrics": {
+          "avg_count_delta": 0.0,
+          "avg_area_ratio": 0.0,
+          "avg_confidence_delta": 0.0,
+          "samples": 2
+        }
+      }
+    ]
+  }
+}
