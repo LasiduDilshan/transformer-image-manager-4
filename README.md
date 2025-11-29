@@ -1372,37 +1372,6 @@ Authorization: Bearer {jwt_token}
 
 ---
 
-## 📞 Support & Contact
-
-### 🆘 Getting Help
-
-<details>
-<summary><strong>Support Channels</strong></summary>
-
-**Technical Support:**
-- 📚 **Documentation**: Check README and wiki first
-- 🐛 **Issue Tracker**: [GitHub Issues](https://github.com/ThermoSight/transformer-image-manager-3/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/ThermoSight/transformer-image-manager-3/discussions)
-- 📧 **Email Support**: support@thermosight.dev
-- 💼 **Enterprise Support**: enterprise@thermosight.dev
-
-**Community Resources:**
-- � **Wiki**: Comprehensive documentation and guides
-- 🎥 **Video Tutorials**: Setup and usage demonstrations
-- 📋 **FAQ**: Common questions and solutions
-- 🔧 **Troubleshooting**: Step-by-step problem resolution
-
-</details>
-
-### 🌟 Stay Connected
-
-- 🐙 **GitHub**: [@ThermoSight](https://github.com/ThermoSight)
-- 🌐 **Website**: [thermosight.dev](https://thermosight.dev)
-- 📧 **Newsletter**: Subscribe for updates and releases
-- 🐦 **Social Media**: Follow for announcements
-
----
-
 <div align="center">
 
 ## 🔥 **ThermoSight Team** 🔥
