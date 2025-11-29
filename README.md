@@ -1269,13 +1269,13 @@ Authorization: Bearer {jwt_token}
 <details>
 <summary><strong>Deployment & Infrastructure Limitations</strong></summary>
 
-| Limitation | Impact | Planned Resolution | Timeline |
-|------------|--------|-------------------|----------|
-| **Local Development Only** | Production deployment not automated | Docker containerization + CI/CD | Q1 2026 |
-| **Manual Setup Required** | Time-intensive initial configuration | Installation automation scripts | Q4 2025 |
-| **WSL Dependency** | Windows-only ML processing | Cross-platform containerization | Q2 2026 |
-| **Single-node Processing** | Limited concurrent ML analysis | Distributed processing cluster | Q2 2026 |
-| **Local File Storage** | Scalability and backup challenges | Cloud storage integration | Q1 2026 |
+| Limitation | Impact | Planned Resolution |
+|------------|--------|-------------------|
+| **Local Development Only** | Production deployment not automated | Docker containerization + CI/CD |
+| **Manual Setup Required** | Time-intensive initial configuration | Installation automation scripts |
+
+| **Single-node Processing** | Limited concurrent ML analysis | Distributed processing cluster |
+| **Local File Storage** | Scalability and backup challenges | Cloud storage integration |
 
 </details>
 
