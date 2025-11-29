@@ -556,6 +556,62 @@ wsl --cd "/mnt/c/.../Model_Inference" -- ./run_inference.sh \
   --sensitivity 1.5
 ```
 
+## Maintenance Records 
+
+There is a full digital maintenance-record workflow so each inspection can produce a structured, editable, and exportable maintenance record.
+
+- **Generate:** When an inspection has a maintenance image and analysis, the system can create a maintenance record form tied to the inspection and transformer.
+- **Edit:** Authorized users can edit fields (inspector name, status, electrical readings, corrective action, recommended action, engineer notes, follow-up dates, etc.).
+- **Save / Version:** Records are saved to the database and include  timestamps and a DRAFT, SUBMITTED, REVIEWED, APPROVED status.
+- **Export:** PDF export of a maintenance record (PDF generation excludes raw maintenance images by default but includes annotated thumbnails and baseline images to keep reports concise).
+- **History:** Each transformer has a maintenance history viewer listing past records with download and delete (admin-only) actions.
+
+### What's Included in a Maintenance Record
+
+The maintenance record form is organized into multiple sections that engineers must complete:
+
+**Inspector Information:**
+- Inspector name, ID, and email
+- Transformer status (OK / Needs Maintenance / Urgent Attention)
+
+**Electrical Readings:**
+- 3-phase voltage readings (Phase A, B, C)
+- 3-phase current readings (Phase A, B, C)
+- Power factor, frequency
+- Temperature readings (ambient, oil, winding)
+- Load condition (No Load / Light / Normal / Heavy / Overload)
+
+**Maintenance Actions:**
+- Detected anomalies (from thermal analysis and visual inspection)
+- Corrective actions taken
+- Recommended future actions
+- Maintenance priority (Low / Medium / High / Critical)
+- Scheduled maintenance date
+- Parts replaced and materials used
+
+**Follow-up & Documentation:**
+- Engineer notes and additional remarks
+- Follow-up requirements and dates
+- Safety observations
+- Compliance check status and notes
+
+### Export Formats Available
+
+Maintenance records can be exported in multiple formats:
+
+**PDF Export:**
+- Professional report format with transformer metadata
+- Includes annotated thermal images and baseline imagery
+- Excludes raw maintenance images to keep file size manageable
+- Suitable for official documentation and regulatory compliance
+
+**CSV Export:**
+- Tabular format with all field data
+- Ideal for data analysis and spreadsheet integration
+- Can export individual records or bulk export all records for a transformer
+- Includes timestamps and status information
+
+---
 ## 📁 Project Structure
 
 ```
