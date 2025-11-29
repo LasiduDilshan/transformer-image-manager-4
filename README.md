@@ -1294,7 +1294,7 @@ Authorization: Bearer {jwt_token}
 ### 🚀 Roadmap & Future Enhancements
 
 <details>
-<summary><strong>Planned Improvements (2025-2026)</strong></summary>
+<summary><strong>Planned Improvements</strong></summary>
 
 - [ ] **Docker Containerization**: Complete application containerization
 - [ ] **Cloud hosting**: Host the website on cloud
