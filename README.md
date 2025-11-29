@@ -5,10 +5,6 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)](https://www.postgresql.org/)
 [![Python](https://img.shields.io/badge/Python-3.8+-yellow.svg)](https://www.python.org/)
 
-> **🔥 Advanced AI-Powered Thermal Anomaly Detection for Electrical Infrastructure**
-
-A comprehensive transformer inspection and anomaly detection system that combines thermal image analysis with machine learning for predictive maintenance of electrical transformers. ThermoSight revolutionizes electrical maintenance through intelligent thermal analysis, providing real-time anomaly detection, interactive annotation capabilities, and continuous model improvement.
-
 
 # Setup Instructions
 
