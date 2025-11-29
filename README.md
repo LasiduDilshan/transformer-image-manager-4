@@ -1409,6 +1409,8 @@ Authorization: Bearer {jwt_token}
 <summary><strong>Planned Improvements (2025-2026)</strong></summary>
 
 - [ ] **Docker Containerization**: Complete application containerization
+- [ ] **Cloud hosting**: Host the website on cloud
+- [ ] **Cloud storage**
 
 </details>
 
