@@ -51,8 +51,8 @@ const TransformerList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchField, setSearchField] = useState("name");
   const [sortConfig, setSortConfig] = useState({
-    key: "createdAt",
-    direction: "desc",
+    key: "name",
+    direction: "asc",
   });
   const [capacityFilter, setCapacityFilter] = useState("all");
   const [starredFilter, setStarredFilter] = useState("all"); // 'all', 'starred', 'unstarred'
