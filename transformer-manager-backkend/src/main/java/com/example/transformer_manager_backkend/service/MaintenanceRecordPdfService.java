@@ -40,6 +40,7 @@ import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
 import com.lowagie.text.Rectangle;
+import com.lowagie.text.ListItem;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
@@ -228,8 +229,8 @@ public class MaintenanceRecordPdfService {
     private void addMaintenanceSection(Document document, MaintenanceRecord record) throws DocumentException {
         document.add(makeSectionHeader("Maintenance Notes"));
         addParagraph(document, "Transformer Status", record.getTransformerStatus());
-        addParagraph(document, "Detected Anomalies", record.getDetectedAnomalies());
-        addParagraph(document, "Corrective Actions", record.getCorrectiveActions());
+        addListParagraph(document, "Detected Anomalies", record.getDetectedAnomalies());
+        addListParagraph(document, "Corrective Actions", record.getCorrectiveActions());
         addParagraph(document, "Recommended Action", record.getRecommendedAction());
         addParagraph(document, "Engineer Notes", record.getEngineerNotes());
         addParagraph(document, "Additional Remarks", record.getAdditionalRemarks());
@@ -521,6 +522,20 @@ public class MaintenanceRecordPdfService {
         document.add(paragraph);
     }
 
+    private void addListParagraph(Document document, String label, String value) throws DocumentException {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        Paragraph title = new Paragraph(label + ":", BODY_FONT);
+        title.setSpacingAfter(4f);
+        document.add(title);
+
+        com.lowagie.text.List bulletList = new com.lowagie.text.List(false, 12f);
+        bulletList.setListSymbol("\u2022 ");
+        splitToLines(value).forEach(line -> bulletList.add(new ListItem(line, BODY_FONT)));
+        document.add(bulletList);
+    }
+
     private PdfPCell createAnomalyCell(String resultJson) {
         PdfPCell cell = new PdfPCell();
         cell.setPadding(6f);
@@ -626,6 +641,29 @@ public class MaintenanceRecordPdfService {
 
     private String safeValue(String value) {
         return value == null || value.isBlank() ? NOT_AVAILABLE : value;
+    }
+
+    private List<String> splitToLines(String text) {
+        if (text == null || text.isBlank()) {
+            return List.of();
+        }
+        String[] parts = text.split("\\r?\\n|;");
+        List<String> cleaned = new ArrayList<>();
+        for (String p : parts) {
+            String trimmed = p.trim();
+            if (!trimmed.isEmpty()) {
+                cleaned.add(trimmed);
+            }
+        }
+        if (cleaned.isEmpty() && text.contains(",")) {
+            for (String p : text.split(",")) {
+                String trimmed = p.trim();
+                if (!trimmed.isEmpty()) {
+                    cleaned.add(trimmed);
+                }
+            }
+        }
+        return cleaned;
     }
 
     private String formatNumber(Double value) {

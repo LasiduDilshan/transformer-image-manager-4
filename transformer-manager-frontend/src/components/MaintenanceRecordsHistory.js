@@ -20,8 +20,11 @@ import {
   faDownload,
   faFileExcel,
   faFilePdf,
+  faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../AuthContext";
+import Toast from "react-bootstrap/Toast";
+import ToastContainer from "react-bootstrap/ToastContainer";
 
 const MaintenanceRecordsHistory = ({ transformerId, refreshToken = 0 }) => {
   const { token } = useAuth();
@@ -32,6 +35,10 @@ const MaintenanceRecordsHistory = ({ transformerId, refreshToken = 0 }) => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [pdfDownloadingId, setPdfDownloadingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastVariant, setToastVariant] = useState("success");
+  const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
     fetchRecords();
@@ -60,6 +67,67 @@ const MaintenanceRecordsHistory = ({ transformerId, refreshToken = 0 }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const deleteRecord = async (recordId) => {
+    if (!recordId || !window.confirm("Delete this maintenance record? This cannot be undone.")) {
+      return;
+    }
+    try {
+      setDeletingId(recordId);
+      await axios.delete(`http://localhost:8080/api/maintenance-records/${recordId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
+      });
+      setRecords((prev) => prev.filter((r) => r.id !== recordId));
+      if (selectedRecord?.id === recordId) {
+        setShowDetailModal(false);
+        setSelectedRecord(null);
+      }
+      setToastVariant("success");
+      setToastMessage("Maintenance record deleted.");
+      setShowToast(true);
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status === 403) {
+        setError("You need admin permission to delete maintenance records.");
+      } else {
+        setError("Failed to delete maintenance record");
+      }
+      setToastVariant("danger");
+      setToastMessage("Delete failed. Check permissions.");
+      setShowToast(true);
+      console.error(err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const toBulletLines = (text) => {
+    if (!text || typeof text !== "string") return [];
+    const parts = text
+      .split(/\r?\n|;/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (parts.length === 0 && text.includes(",")) {
+      return text
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean);
+    }
+    return parts;
+  };
+
+  const renderBulletList = (text) => {
+    const lines = toBulletLines(text);
+    if (lines.length === 0) return <span className="text-muted">N/A</span>;
+    return (
+      <ul className="mb-0">
+        {lines.map((line, idx) => (
+          <li key={idx}>{line}</li>
+        ))}
+      </ul>
+    );
   };
 
   const getStatusBadge = (status) => {
@@ -397,47 +465,71 @@ const MaintenanceRecordsHistory = ({ transformerId, refreshToken = 0 }) => {
                       </small>
                     </td>
                     <td>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        className="me-2"
-                        onClick={() => handleViewDetails(record)}
-                      >
-                        <FontAwesomeIcon icon={faEye} className="me-1" />
-                        View
-                      </Button>
-                      <Button
-                        variant="outline-success"
-                        size="sm"
-                        onClick={() => handleDownloadSingleRecordCSV(record)}
-                      >
-                        <FontAwesomeIcon icon={faDownload} className="me-1" />
-                        CSV
-                      </Button>
-                      <Button
-                        variant="outline-danger"
-                        size="sm"
-                        className="ms-2"
-                        disabled={pdfDownloadingId === record.id}
-                        onClick={() => handleDownloadRecordPdf(record.id)}
-                      >
-                        {pdfDownloadingId === record.id ? (
-                          <>
-                            <Spinner
-                              as="span"
-                              animation="border"
-                              size="sm"
-                              className="me-2"
-                            />
-                            Preparing...
-                          </>
-                        ) : (
-                          <>
-                            <FontAwesomeIcon icon={faFilePdf} className="me-1" />
-                            PDF
-                          </>
-                        )}
-                      </Button>
+                      <div className="d-flex flex-wrap gap-2">
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={() => handleViewDetails(record)}
+                        >
+                          <FontAwesomeIcon icon={faEye} className="me-1" />
+                          View
+                        </Button>
+                        <Button
+                          variant="outline-success"
+                          size="sm"
+                          onClick={() => handleDownloadSingleRecordCSV(record)}
+                        >
+                          <FontAwesomeIcon icon={faDownload} className="me-1" />
+                          CSV
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          disabled={pdfDownloadingId === record.id}
+                          onClick={() => handleDownloadRecordPdf(record.id)}
+                        >
+                          {pdfDownloadingId === record.id ? (
+                            <>
+                              <Spinner
+                                as="span"
+                                animation="border"
+                                size="sm"
+                                className="me-2"
+                              />
+                              Preparing...
+                            </>
+                          ) : (
+                            <>
+                              <FontAwesomeIcon icon={faFilePdf} className="me-1" />
+                              PDF
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          disabled={deletingId === record.id}
+                          onClick={() => deleteRecord(record.id)}
+                          title="Delete maintenance record"
+                        >
+                          {deletingId === record.id ? (
+                            <>
+                              <Spinner
+                                as="span"
+                                animation="border"
+                                size="sm"
+                                className="me-2"
+                              />
+                              Deleting...
+                            </>
+                          ) : (
+                            <>
+                              <FontAwesomeIcon icon={faTrash} className="me-1" />
+                              Delete
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -446,6 +538,18 @@ const MaintenanceRecordsHistory = ({ transformerId, refreshToken = 0 }) => {
           )}
         </Card.Body>
       </Card>
+
+      <ToastContainer position="bottom-end" className="p-3">
+        <Toast
+          bg={toastVariant}
+          onClose={() => setShowToast(false)}
+          show={showToast}
+          delay={3000}
+          autohide
+        >
+          <Toast.Body className="text-white">{toastMessage}</Toast.Body>
+        </Toast>
+      </ToastContainer>
 
       {/* Detail Modal */}
       <Modal
@@ -633,18 +737,16 @@ const MaintenanceRecordsHistory = ({ transformerId, refreshToken = 0 }) => {
                 <Card.Header>Maintenance Actions</Card.Header>
                 <Card.Body>
                   {selectedRecord.detectedAnomalies && (
-                    <p>
+                    <div className="mb-2">
                       <strong>Detected Anomalies:</strong>
-                      <br />
-                      {selectedRecord.detectedAnomalies}
-                    </p>
+                      {renderBulletList(selectedRecord.detectedAnomalies)}
+                    </div>
                   )}
                   {selectedRecord.correctiveActions && (
-                    <p>
+                    <div className="mb-2">
                       <strong>Corrective Actions:</strong>
-                      <br />
-                      {selectedRecord.correctiveActions}
-                    </p>
+                      {renderBulletList(selectedRecord.correctiveActions)}
+                    </div>
                   )}
                   {selectedRecord.recommendedAction && (
                     <p>
