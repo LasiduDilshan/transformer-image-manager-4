@@ -44,6 +44,10 @@ const MaintenanceRecordsHistory = ({ transformerId, refreshToken = 0 }) => {
     fetchRecords();
   }, [transformerId, refreshToken]);
 
+  // Fetch maintenance records for the selected transformer from the backend API.
+// - If no transformer is selected, clears records and exits early.
+// - Sends an authenticated request using JWT token.
+// - Stores fetched data in state for display.
   const fetchRecords = async () => {
     try {
       if (!transformerId) {
@@ -68,7 +72,12 @@ const MaintenanceRecordsHistory = ({ transformerId, refreshToken = 0 }) => {
       setLoading(false);
     }
   };
-
+// Deletes a maintenance record by ID after user confirmation.
+// - Prevents deletion if no record is selected.
+// - Sends an authenticated DELETE request to the backend.
+// - Updates UI state by removing the deleted record from the list.
+// - Closes detail view if the deleted record is currently open.
+// - Displays success or error feedback using toast notifications.
   const deleteRecord = async (recordId) => {
     if (!recordId || !window.confirm("Delete this maintenance record? This cannot be undone.")) {
       return;
@@ -102,7 +111,10 @@ const MaintenanceRecordsHistory = ({ transformerId, refreshToken = 0 }) => {
       setDeletingId(null);
     }
   };
-
+  
+// Converts a raw text string into a clean list of bullet-point lines.
+// - Splits input using newline or semicolon delimiters.
+// - Trims whitespace and removes empty values.
   const toBulletLines = (text) => {
     if (!text || typeof text !== "string") return [];
     const parts = text
@@ -117,7 +129,10 @@ const MaintenanceRecordsHistory = ({ transformerId, refreshToken = 0 }) => {
     }
     return parts;
   };
-
+  
+// Renders structured bullet points from raw text input.
+// - Converts text into bullet lines using toBulletLines().
+// - Displays "N/A" if no valid content is available.
   const renderBulletList = (text) => {
     const lines = toBulletLines(text);
     if (lines.length === 0) return <span className="text-muted">N/A</span>;
@@ -329,6 +344,10 @@ const MaintenanceRecordsHistory = ({ transformerId, refreshToken = 0 }) => {
     }
   };
 
+// Downloads a maintenance record as a PDF file.
+// - Sends an authenticated request to the backend export endpoint.
+// - Expects a binary PDF file (blob) response.
+// - Tracks download state for UI feedback.
   const handleDownloadRecordPdf = async (recordId) => {
     if (!recordId) return;
     try {
